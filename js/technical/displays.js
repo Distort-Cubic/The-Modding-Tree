@@ -2,9 +2,9 @@ function prestigeButtonText(layer) {
 	if (layers[layer].prestigeButtonText !== undefined)
 		return run(layers[layer].prestigeButtonText(), layers[layer])
 	if (tmp[layer].type == "normal")
-		return `${player[layer].points.lt(1e3) ? (tmp[layer].resetDescription !== undefined ? tmp[layer].resetDescription : "Reset for ") : ""}+<b>${formatWhole(tmp[layer].resetGain)}</b> ${tmp[layer].resource} ${tmp[layer].resetGain.lt(100) && player[layer].points.lt(1e3) ? `<br><br>Next at ${(tmp[layer].roundUpCost ? formatWhole(tmp[layer].nextAt) : format(tmp[layer].nextAt))} ${tmp[layer].baseResource}` : ""}`
+		return `${player[layer].points < 1000 ? (tmp[layer].resetDescription !== undefined ? tmp[layer].resetDescription : "Reset for ") : ""}+<b>${formatWhole(tmp[layer].resetGain)}</b> ${tmp[layer].resource} ${tmp[layer].resetGain < 100 && player[layer].points < 1000 ? `<br><br>Next at ${(tmp[layer].roundUpCost ? formatWhole(tmp[layer].nextAt) : format(tmp[layer].nextAt))} ${tmp[layer].baseResource}` : ""}`
 	if (tmp[layer].type == "static")
-		return `${tmp[layer].resetDescription !== undefined ? tmp[layer].resetDescription : "Reset for "}+<b>${formatWhole(tmp[layer].resetGain)}</b> ${tmp[layer].resource}<br><br>${player[layer].points.lt(30) ? (tmp[layer].baseAmount.gte(tmp[layer].nextAt) && (tmp[layer].canBuyMax !== undefined) && tmp[layer].canBuyMax ? "Next:" : "Req:") : ""} ${formatWhole(tmp[layer].baseAmount)} / ${(tmp[layer].roundUpCost ? formatWhole(tmp[layer].nextAtDisp) : format(tmp[layer].nextAtDisp))} ${tmp[layer].baseResource}		
+		return `${tmp[layer].resetDescription !== undefined ? tmp[layer].resetDescription : "Reset for "}+<b>${formatWhole(tmp[layer].resetGain)}</b> ${tmp[layer].resource}<br><br>${player[layer].points < 30 ? (tmp[layer].baseAmount >= (tmp[layer].nextAt) && (tmp[layer].canBuyMax !== undefined) && tmp[layer].canBuyMax ? "Next:" : "Req:") : ""} ${formatWhole(tmp[layer].baseAmount)} / ${(tmp[layer].roundUpCost ? formatWhole(tmp[layer].nextAtDisp) : format(tmp[layer].nextAtDisp))} ${tmp[layer].baseResource}		
 		`
 	if (tmp[layer].type == "none")
 		return ""
@@ -64,23 +64,16 @@ function updateWidth() {
 function updateOomps(diff)
 {
 	tmp.other.oompsMag = 0
-	if (player.points.lte(new Decimal(1e100)) || diff == 0) return
+	if (player.points < 1e100 || diff == 0) return
 
-	var pp = new Decimal(player.points);
-	var lp = tmp.other.lastPoints || new Decimal(0);
-	if (pp.gt(lp)) {
-		if (pp.gte("10^^8")) {
-			pp = pp.slog(1e10)
-			lp = lp.slog(1e10)
-			tmp.other.oomps = pp.sub(lp).div(diff)
-			tmp.other.oompsMag = -1;
-		} else {
-			while (pp.div(lp).log(10).div(diff).gte("100") && tmp.other.oompsMag <= 5 && lp.gt(0)) {
-				pp = pp.log(10)
-				lp = lp.log(10)
-				tmp.other.oomps = pp.sub(lp).div(diff)
-				tmp.other.oompsMag++;
-			}
+	var pp = player.points;
+	var lp = tmp.other.lastPoints || 0;
+	if (pp > lp) {
+		while (Math.log10(pp / lp) / diff >= 100 && tmp.other.oompsMag <= 5 && lp > 0) {
+			pp = Math.log10(pp)
+			lp = Math.log10(lp)
+			tmp.other.oomps = (pp-lp)/diff
+			tmp.other.oompsMag++;
 		}
 	}
 
@@ -90,11 +83,9 @@ function constructBarStyle(layer, id) {
 	let bar = tmp[layer].bars[id]
 	let style = {}
 
-	let tempProgress
-	if (bar.progress instanceof Decimal)
-		tempProgress = (1 -Math.min(Math.max(bar.progress.toNumber(), 0), 1)) * 100
-	else
-		tempProgress = (1 -Math.min(Math.max(bar.progress, 0), 1)) * 100
+	let tempProgress;
+	
+	tempProgress = (1 -Math.min(Math.max(bar.progress, 0), 1)) * 100
 
 	style.dims = {'width': bar.width + "px", 'height': bar.height + "px"}
 	let dir = bar.direction
